@@ -10,7 +10,7 @@ app = Flask(__name__)
 # Load dataset
 # --------------------------------------------------
 
-DATA_PATH = "food_wastage_data.csv"
+DATA_PATH = "food_waste_data.csv"
 
 df = pd.read_csv(DATA_PATH)
 

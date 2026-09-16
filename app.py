@@ -6,27 +6,33 @@ import os
 
 app = Flask(__name__)
 
-# --------------------------------------------------
+ 
 # Load dataset
-# --------------------------------------------------
+ 
 
 DATA_PATH = "food_waste_data.csv"
 
 df = pd.read_csv(DATA_PATH)
 
 
-# --------------------------------------------------
-# Load trained Random Forest model
-# --------------------------------------------------
+ 
+# Load trained XGBoost model + preprocessor
+ 
 
-MODEL_PATH = "food_waste_model.pkl"
+MODEL_PATH = "food_waste_xgb_pipeline.pkl"
 
-model = joblib.load(MODEL_PATH)
+xgb_pipeline = joblib.load(MODEL_PATH)
+
+# Extract model
+model = xgb_pipeline["model"]
+
+# Extract the same preprocessor used during training
+preprocessor = xgb_pipeline["preprocessor"]
 
 
-# --------------------------------------------------
+ 
 # Column definitions
-# --------------------------------------------------
+ 
 
 categorical_columns = [
     "Type of Food",
@@ -45,30 +51,31 @@ numerical_columns = [
 ]
 
 
-# --------------------------------------------------
+ 
 # Get dropdown options
-# --------------------------------------------------
+ 
 
 dropdown_options = {}
 
 for column in categorical_columns:
+
     dropdown_options[column] = sorted(
         df[column].dropna().unique().tolist()
     )
 
 
-# --------------------------------------------------
+ 
 # Find most similar row
-# --------------------------------------------------
+ 
 
 def find_similar_row(user_data):
 
     # Start with the complete dataset
     candidates = df.copy()
 
-    # --------------------------------------------------
+     
     # Filter using categorical values entered by user
-    # --------------------------------------------------
+     
 
     for column in categorical_columns:
 
@@ -83,11 +90,12 @@ def find_similar_row(user_data):
     # If filtering leaves no rows,
     # use the complete dataset
     if len(candidates) == 0:
+
         candidates = df.copy()
 
-    # --------------------------------------------------
+     
     # Calculate similarity for numerical values
-    # --------------------------------------------------
+     
 
     numerical_input = []
 
@@ -101,8 +109,11 @@ def find_similar_row(user_data):
                 (column, float(value))
             )
 
+     
     # If numerical values were provided,
     # find the closest row
+     
+
     if numerical_input:
 
         distances = np.zeros(len(candidates))
@@ -117,6 +128,7 @@ def find_similar_row(user_data):
             )
 
             if column_range == 0:
+
                 column_range = 1
 
             distances += (
@@ -142,9 +154,9 @@ def find_similar_row(user_data):
     return similar_row
 
 
-# --------------------------------------------------
+ 
 # Home page
-# --------------------------------------------------
+ 
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -157,12 +169,13 @@ def home():
 
         try:
 
-            # --------------------------------------------------
+             
             # Collect user input
-            # --------------------------------------------------
+             
 
             user_data = {}
 
+            # Collect categorical values
             for column in categorical_columns:
 
                 user_data[column] = request.form.get(
@@ -170,6 +183,7 @@ def home():
                     ""
                 )
 
+            # Collect numerical values
             for column in numerical_columns:
 
                 value = request.form.get(
@@ -180,32 +194,36 @@ def home():
                 user_data[column] = value
 
 
-            # --------------------------------------------------
+             
             # Find most similar dataset row
-            # --------------------------------------------------
+             
 
             similar_row = find_similar_row(
                 user_data
             )
 
 
-            # --------------------------------------------------
+             
             # Fill missing numerical values
-            # --------------------------------------------------
+             
 
             completed_data = {}
 
+            # Categorical values
             for column in categorical_columns:
 
                 completed_data[column] = user_data[column]
 
 
+            # Numerical values
             for column in numerical_columns:
 
                 value = user_data[column]
 
                 if value == "" or value is None:
 
+                    # Fill blank value using
+                    # the most similar row
                     completed_data[column] = float(
                         similar_row[column]
                     )
@@ -215,18 +233,18 @@ def home():
                     completed_data[column] = float(value)
 
 
-            # --------------------------------------------------
+             
             # Create DataFrame for model
-            # --------------------------------------------------
+             
 
             input_df = pd.DataFrame(
                 [completed_data]
             )
 
 
-            # --------------------------------------------------
+             
             # Add engineered feature
-            # --------------------------------------------------
+             
 
             input_df["Food_Per_Guest"] = (
                 input_df["Quantity of Food"] /
@@ -234,13 +252,28 @@ def home():
             )
 
 
-            # --------------------------------------------------
-            # Make prediction
-            # --------------------------------------------------
+             
+            # IMPORTANT:
+            # Apply the SAME preprocessor used during training
+             
+
+            input_encoded = preprocessor.transform(
+                input_df
+            )
+
+
+             
+            # Make prediction using XGBoost
+             
 
             prediction = model.predict(
-                input_df
+                input_encoded
             )[0]
+
+
+             
+            # Make sure prediction is not negative
+             
 
             prediction = max(
                 0,
@@ -248,9 +281,9 @@ def home():
             )
 
 
-            # --------------------------------------------------
+             
             # Store values used by model
-            # --------------------------------------------------
+             
 
             filled_values = completed_data.copy()
 
@@ -259,6 +292,10 @@ def home():
 
             error = str(e)
 
+
+     
+    # Render webpage
+     
 
     return render_template(
         "index.html",
@@ -271,9 +308,9 @@ def home():
     )
 
 
-# --------------------------------------------------
+ 
 # Run application
-# --------------------------------------------------
+ 
 
 if __name__ == "__main__":
 

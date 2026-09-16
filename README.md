@@ -357,4 +357,3 @@ This project was developed as part of an **IBM SkillsBuild / SDG-focused virtual
 The **Food Wastage Prediction System** demonstrates an end-to-end Machine Learning workflow, from data preprocessing and exploratory analysis to model training, hyperparameter tuning, model saving, and deployment through a Flask web application.
 
 The project demonstrates how Machine Learning can be applied to a real-world sustainability problem involving food wastage and responsible resource consumption.
----

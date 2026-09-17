@@ -63,7 +63,7 @@ Model + Preprocessor Saved
 Flask Web Application
    ↓
 Food Wastage Prediction
-
+```
 
 ---
 

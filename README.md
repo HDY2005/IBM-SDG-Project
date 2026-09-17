@@ -1,4 +1,3 @@
-````markdown
 # 🌱 Food Wastage Prediction System
 
 A Machine Learning project developed as part of an **IBM SkillsBuild / SDG-focused virtual internship** to predict food wastage based on different food, event, storage, and quantity-related factors.
@@ -64,7 +63,7 @@ Model + Preprocessor Saved
 Flask Web Application
    ↓
 Food Wastage Prediction
-````
+
 
 ---
 
